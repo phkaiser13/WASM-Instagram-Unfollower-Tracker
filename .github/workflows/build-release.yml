@@ -3,8 +3,7 @@
 # * Description: This GitHub Actions workflow automates the build, test, and
 # * release process for the Rust WASM module. It triggers on pushes/PRs to the
 # * main branch for continuous integration, and on version tags (e.g., v1.0.0)
-# * to create a GitHub Release with the compiled WASM artifacts. It uses
-# * best practices like caching, linting (clippy), and job separation.
+# * to create a GitHub Release with the compiled WASM artifacts.
 # * SPDX-License-Identifier: Apache-2.0 */
 
 name: Build and Release WASM
@@ -17,6 +16,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   build_and_test:
     name: Build & Test WASM Module
@@ -28,11 +30,25 @@ jobs:
         uses: actions/checkout@v4
 
       # 2. (DEBUG STEP) List files to verify the directory structure
-      # This is crucial for debugging path-related errors.
-      - name: List files in the repository
-        run: ls -R
+      - name: List repository structure
+        run: |
+          echo "Repository root structure:"
+          ls -la
+          echo ""
+          echo "Looking for Rust project:"
+          find . -name "Cargo.toml" -type f
+          echo ""
+          echo "Looking for src directory:"
+          find . -name "src" -type d
+          echo ""
+          echo "Extension directory structure:"
+          if [ -d "extension" ]; then
+            ls -la extension/
+          else
+            echo "Extension directory not found"
+          fi
 
-      # 3. Install the Rust toolchain with the correct target for browser-based WASM.
+      # 3. Install the Rust toolchain with WASM target
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -52,56 +68,193 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            rust_logic/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic/Cargo.lock') }}
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock', 'Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-      # 6. Run Linter (Clippy)
-      # The working-directory path must exactly match the directory name in the repo.
+      # 6. Validate Cargo.toml exists and is valid
+      - name: Validate Rust project structure
+        run: |
+          if [ ! -f "Cargo.toml" ]; then
+            echo "Error: Cargo.toml not found in repository root"
+            exit 1
+          fi
+          
+          if [ ! -f "src/lib.rs" ]; then
+            echo "Error: src/lib.rs not found"
+            exit 1
+          fi
+          
+          echo "Rust project structure validated successfully"
+
+      # 7. Run Linter (Clippy)
       - name: Run Linter (Clippy)
-        run: cargo clippy -- -D warnings
-        working-directory: ./WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic
+        run: cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
-      # 7. Run tests
+      # 8. Run tests (if any)
       - name: Run tests
         run: cargo test --verbose
-        working-directory: ./WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic
 
-      # 8. Build the WASM package for production
+      # 9. Create extension/wasm directory if it doesn't exist
+      - name: Prepare output directory
+        run: |
+          mkdir -p extension/wasm
+          echo "Created extension/wasm directory"
+
+      # 10. Build the WASM package for production
       - name: Build WASM for production
-        run: wasm-pack build --target web --out-dir ../extension/wasm
-        working-directory: ./WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic
+        run: |
+          echo "Building WASM package..."
+          wasm-pack build --target web --out-dir extension/wasm --out-name unfollower_logic
+          echo "WASM build completed successfully"
 
-      # 9. Upload the compiled WASM artifacts for the release job
-- name: Upload WASM artifacts
+      # 11. Verify build output
+      - name: Verify build output
+        run: |
+          echo "Checking build output:"
+          ls -la extension/wasm/
+          echo ""
+          echo "Verifying required files exist:"
+          
+          required_files=(
+            "extension/wasm/unfollower_logic.js"
+            "extension/wasm/unfollower_logic_bg.wasm"
+            "extension/wasm/package.json"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✓ $file exists ($(stat -c%s "$file") bytes)"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+
+      # 12. Create a complete extension package
+      - name: Package extension
+        run: |
+          echo "Creating extension package..."
+          
+          # Create a clean extension directory for packaging
+          rm -rf extension-package
+          mkdir extension-package
+          
+          # Copy all extension files
+          cp -r extension/* extension-package/
+          
+          # Verify manifest.json exists
+          if [ ! -f "extension-package/manifest.json" ]; then
+            echo "Warning: manifest.json not found, creating a basic one"
+            cat > extension-package/manifest.json << 'EOF'
+          {
+            "manifest_version": 3,
+            "name": "WASM Instagram Unfollower Tracker",
+            "version": "1.0.0",
+            "description": "A high-performance Instagram unfollower tracker built with Rust and WebAssembly.",
+            "permissions": ["storage", "scripting"],
+            "host_permissions": ["*://*.instagram.com/*"],
+            "action": {
+              "default_popup": "popup.html"
+            },
+            "web_accessible_resources": [
+              {
+                "resources": ["wasm/unfollower_logic_bg.wasm"],
+                "matches": ["chrome-extension://*"]
+              }
+            ]
+          }
+          EOF
+          fi
+          
+          echo "Extension package created successfully"
+          ls -la extension-package/
+
+      # 13. Upload the compiled WASM artifacts
+      - name: Upload WASM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wasm-build
           path: |
-            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/unfollower_logic.js
-            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/unfollower_logic_bg.wasm
-            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/package.json
-            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/.gitignore
+            extension/wasm/unfollower_logic.js
+            extension/wasm/unfollower_logic_bg.wasm
+            extension/wasm/package.json
+          retention-days: 30
+
+      # 14. Upload complete extension package
+      - name: Upload extension package
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-package
+          path: extension-package/
+          retention-days: 30
 
   create_release:
     name: Create GitHub Release
     needs: build_and_test
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      # 1. Download the artifacts built in the previous job
+      # 1. Checkout code for release
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Download the artifacts built in the previous job
       - name: Download WASM artifacts
         uses: actions/download-artifact@v4
         with:
           name: wasm-build
-          path: wasm-release-assets
+          path: release-assets/wasm
 
-      # 2. Create the release and upload the assets
+      - name: Download extension package
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-package
+          path: release-assets/extension
+
+      # 3. Create ZIP package for easy distribution
+      - name: Create extension ZIP
+        run: |
+          cd release-assets/extension
+          zip -r ../instagram-unfollower-tracker-extension.zip .
+          cd ../..
+          
+          echo "Release assets created:"
+          ls -la release-assets/
+
+      # 4. Create the release and upload the assets
       - name: Create Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "wasm-release-assets/*"
+          artifacts: |
+            release-assets/instagram-unfollower-tracker-extension.zip
+            release-assets/wasm/*
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          name: "Release ${{ github.ref_name }}"
+          body: |
+            ## Instagram Unfollower Tracker ${{ github.ref_name }}
+            
+            ### What's included:
+            - 🚀 **instagram-unfollower-tracker-extension.zip**: Complete Chrome extension ready for installation
+            - ⚡ **WASM files**: High-performance Rust/WebAssembly core logic
+            
+            ### Installation Instructions:
+            1. Download the `instagram-unfollower-tracker-extension.zip` file
+            2. Extract it to a folder on your computer
+            3. Open Chrome and go to `chrome://extensions/`
+            4. Enable "Developer mode" in the top right
+            5. Click "Load unpacked" and select the extracted folder
+            
+            ### Usage:
+            1. Go to Instagram and open your followers list
+            2. Click the extension icon in your browser toolbar
+            3. Click "Check for Unfollowers"
+            
+            Built with ❤️ using Rust and WebAssembly for maximum performance!
