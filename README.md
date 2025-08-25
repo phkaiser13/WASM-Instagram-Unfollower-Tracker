@@ -9,7 +9,7 @@
 
 # WASM Instagram Unfollower Tracker
 
-[![Build Status](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/build-release.yml/badge.svg)](https://github.com/phkaiser13/WASM-Instagram-Unfollower-Tracker/actions/workflows/build-release.yml)
+[![Build Status](https://github.com/phkaiser13/WASM-Instagram-Unfollower-Tracker/actions/workflows/build-release.yml/badge.svg)](https://github.com/phkaiser13/WASM-Instagram-Unfollower-Tracker/actions/workflows/build-release.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A high-performance Chrome extension built with Rust and WebAssembly to track your Instagram unfollowers.
