@@ -1,4 +1,4 @@
-﻿# /* Copyright (C) 2025 Pedro Henrique / phkaiser13
+# /* Copyright (C) 2025 Pedro Henrique / phkaiser13
 # * File: Cargo.toml
 # * Description: This is the manifest file for the Rust WebAssembly crate. It
 # * defines project metadata, dependencies, and compilation profiles. Key
@@ -34,6 +34,9 @@ rmp-serde = "1.1.2"
 # hook forwards the detailed error message to the browser's console.error().
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
+# Required for wasm-bindgen serialization
+serde-wasm-bindgen = "0.6"
+
 [profile.release]
 # Enables Link-Time Optimization, allowing for more aggressive optimizations
 # across the entire codebase, resulting in a smaller and faster binary.
@@ -41,7 +44,7 @@ lto = true
 
 # Optimize for size. "s" is a good balance between size and speed. "z" is
 # even smaller but might sacrifice some performance. For web delivery, size
-* is a primary concern.
+# is a primary concern.
 opt-level = "s"
 
 # Reduces the number of code generation units, which can improve optimization
