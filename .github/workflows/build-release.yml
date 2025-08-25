@@ -1,0 +1,118 @@
+# /* Copyright (C) 2025 Pedro Henrique / phkaiser13
+# * File: build-release.yml
+# * Description: This GitHub Actions workflow automates the build, test, and
+# * release process for the Rust WASM module. It triggers on pushes/PRs to the
+# * main branch for continuous integration, and on version tags (e.g., v1.0.0)
+# * to create a GitHub Release with the compiled WASM artifacts. It uses
+# * best practices like caching, linting (clippy), and job separation.
+# * SPDX-License-Identifier: Apache-2.0 */
+
+name: Build and Release WASM
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*' # Matches v1.0.0, v1.2.3-alpha, etc.
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # This job handles the building and testing of the WASM module.
+  # It runs on every push and pull request to ensure code quality.
+  build_and_test:
+    name: Build & Test WASM Module
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Install the Rust toolchain with the correct target for browser-based WASM.
+      # 'wasm32-unknown-unknown' is the target for wasm-bindgen and web environments.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      # 3. Install wasm-pack, the primary tool for building and packaging Rust-WASM crates.
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      # 4. Cache Rust dependencies (Cargo registry, index, and build cache)
+      # This significantly speeds up subsequent builds.
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust_logic/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust_logic/Cargo.lock') }}
+
+      # 5. Run Clippy for linting. This helps catch common mistakes and improve code quality.
+      # The command fails the job if any warnings are found (-D warnings).
+      - name: Run Linter (Clippy)
+        run: cargo clippy -- -D warnings
+        working-directory: ./rust_logic
+
+      # 6. Run tests to ensure the logic is correct.
+      - name: Run tests
+        run: cargo test --verbose
+        working-directory: ./rust_logic
+
+      # 7. Build the WASM package for production.
+      # --target web creates an ES Module compatible package.
+      # --out-dir specifies where the final .js and .wasm files will be placed.
+      - name: Build WASM for production
+        run: wasm-pack build --target web --out-dir ../extension/wasm
+        working-directory: ./rust_logic
+
+      # 8. Upload the compiled WASM artifacts.
+      # This allows the 'create_release' job to download and use these files
+      # without having to rebuild them.
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-build
+          path: |
+            extension/wasm/unfollower_logic.js
+            extension/wasm/unfollower_logic_bg.wasm
+            extension/wasm/package.json
+            extension/wasm/.gitignore
+
+  # This job creates a GitHub Release ONLY when a version tag is pushed.
+  create_release:
+    name: Create GitHub Release
+    # This job depends on the successful completion of the build_and_test job.
+    needs: build_and_test
+    # It only runs if the trigger was a tag push.
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    # It needs permission to write to 'contents' to create the release.
+    permissions:
+      contents: write
+
+    steps:
+      # 1. Download the artifacts that were built and uploaded in the previous job.
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-build
+          path: wasm-release-assets
+
+      # 2. Use a popular and robust action to create the release.
+      - name: Create Release and Upload Assets
+        uses: ncipollo/release-action@v1
+        with:
+          # The files to attach to the release.
+          artifacts: "wasm-release-assets/*"
+          # The GitHub token is automatically provided by Actions.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Automatically generate release notes from merged pull requests.
+          generateReleaseNotes: true

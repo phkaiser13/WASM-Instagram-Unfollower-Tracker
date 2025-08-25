@@ -1,0 +1,49 @@
+﻿# /* Copyright (C) 2025 Pedro Henrique / phkaiser13
+# * File: Cargo.toml
+# * Description: This is the manifest file for the Rust WebAssembly crate. It
+# * defines project metadata, dependencies, and compilation profiles. Key
+# * dependencies include wasm-bindgen for JS interoperability, serde for data
+# * serialization, and rmp-serde for MessagePack encoding/decoding. The release
+# * profile is heavily optimized for size and speed, which is critical for
+# * web-delivered modules.
+# * SPDX-License-Identifier: Apache-2.0 */
+
+[package]
+name = "unfollower_logic"
+version = "0.1.0"
+authors = ["Pedro Henrique / phkaiser13"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The bridge between Rust and JavaScript. Enables exporting Rust functions
+# and importing JavaScript functionality.
+wasm-bindgen = "0.2.87"
+
+# The standard for serialization and deserialization in Rust. We use its
+# derive macros to make our data structures serializable.
+serde = { version = "1.0.188", features = ["derive"] }
+
+# The MessagePack implementation for Serde. This is the core library for
+# encoding our follower lists into a compact binary format.
+rmp-serde = "1.1.2"
+
+# A utility for better debugging. When a Rust `panic` occurs in WASM, this
+# hook forwards the detailed error message to the browser's console.error().
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[profile.release]
+# Enables Link-Time Optimization, allowing for more aggressive optimizations
+# across the entire codebase, resulting in a smaller and faster binary.
+lto = true
+
+# Optimize for size. "s" is a good balance between size and speed. "z" is
+# even smaller but might sacrifice some performance. For web delivery, size
+* is a primary concern.
+opt-level = "s"
+
+# Reduces the number of code generation units, which can improve optimization
+# opportunities at the cost of longer compile times. Ideal for release builds.
+codegen-units = 1

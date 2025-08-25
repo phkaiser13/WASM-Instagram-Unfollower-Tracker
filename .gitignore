@@ -1,0 +1,57 @@
+# /* Copyright (C) 2025 Pedro Henrique / phkaiser13
+# * File: .gitignore
+# * Description: This file specifies intentionally untracked files to be ignored
+# * by Git. It covers Rust/Cargo build artifacts, WebAssembly compilation
+# * output, common IDE/editor configuration files, and OS-specific junk files.
+# * Note: Cargo.lock is intentionally NOT ignored to ensure reproducible builds.
+# * SPDX-License-Identifier: Apache-2.0 */
+
+# --- Rust / Cargo ---
+# The `target` directory contains all build artifacts and intermediate files.
+# It can become very large and should never be committed.
+/target/
+# Rust-analyzer metadata file
+.rustc_info.json
+# Rust toolchain file, if locally overridden
+rust-toolchain
+
+# --- WebAssembly Build Output ---
+# The directory where wasm-pack places the compiled .wasm and .js files.
+# These are generated artifacts and should be built via the CI/CD pipeline or locally.
+/extension/wasm/
+
+# --- Node.js / JavaScript ---
+# Common for JS tooling that might be added later (e.g., linters, formatters).
+/node_modules/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- IDE / Editor Configuration ---
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains (CLion, RustRover, etc.)
+.idea/
+
+# --- OS Generated Files ---
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Packaged Extension Files ---
+# Ignore zipped or packed extension files that might be created for distribution.
+*.zip
+*.crx
