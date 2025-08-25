@@ -78,8 +78,8 @@ pub fn find_unfollowers(new_followers_js: JsValue, old_followers_mpack: &[u8]) -
 ///
 /// This function takes a JavaScript array of strings, converts it into a Rust
 /// `Vec<String>`, and then serializes it using `rmp_serde` into a compact
-* `Vec<u8>`. This byte vector is then returned to JavaScript as a `Uint8Array`,
-* ready to be stored using `chrome.storage.local`.
+/// `Vec<u8>`. This byte vector is then returned to JavaScript as a `Uint8Array`,
+/// ready to be stored using `chrome.storage.local`.
 ///
 /// # Arguments
 ///
