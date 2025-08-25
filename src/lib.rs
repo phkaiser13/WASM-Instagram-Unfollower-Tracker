@@ -10,7 +10,6 @@
 * SPDX-License-Identifier: Apache-2.0 */
 
 use wasm_bindgen::prelude::*;
-use serde::{Serialize, Deserialize};
 use std::collections::HashSet;
 
 // This function is called when the WASM module is instantiated.
