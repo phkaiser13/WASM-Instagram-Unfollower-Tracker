@@ -53,34 +53,34 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             rust_logic/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust_logic/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic/Cargo.lock') }}
 
       # 6. Run Linter (Clippy)
       # The working-directory path must exactly match the directory name in the repo.
       - name: Run Linter (Clippy)
         run: cargo clippy -- -D warnings
-        working-directory: rust_logic
+        working-directory: ./WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic
 
       # 7. Run tests
       - name: Run tests
         run: cargo test --verbose
-        working-directory: rust_logic
+        working-directory: ./WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic
 
       # 8. Build the WASM package for production
       - name: Build WASM for production
         run: wasm-pack build --target web --out-dir ../extension/wasm
-        working-directory: rust_logic
+        working-directory: ./WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/rust_logic
 
       # 9. Upload the compiled WASM artifacts for the release job
-      - name: Upload WASM artifacts
+- name: Upload WASM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wasm-build
           path: |
-            extension/wasm/unfollower_logic.js
-            extension/wasm/unfollower_logic_bg.wasm
-            extension/wasm/package.json
-            extension/wasm/.gitignore
+            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/unfollower_logic.js
+            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/unfollower_logic_bg.wasm
+            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/package.json
+            WASM-Instagram-Unfollower-Tracker-73162d094d9a829feecab62727b7e51a9f5d6207/extension/wasm/.gitignore
 
   create_release:
     name: Create GitHub Release
