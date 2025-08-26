@@ -42,8 +42,8 @@ To build this project from the source, you will need:
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-    cd YOUR_REPO
+    git clone https://github.com/phkaiser13/WASM-Instagram-Unfollower-Tracker.git
+    cd WASM-Instagram-Unfollower-Tracker
     ```
 
 2.  **Build the WebAssembly module:**
